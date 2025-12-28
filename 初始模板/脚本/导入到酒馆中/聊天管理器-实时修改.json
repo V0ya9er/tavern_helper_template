@@ -1,0 +1,13 @@
+{
+  "id": "chat-manager-dev-import",
+  "name": "聊天管理器-实时修改",
+  "content": "import 'http://localhost:5500/dist/聊天管理器/index.js'",
+  "info": "用于开发时实时修改的导入文件，需要先运行 pnpm watch 并启动本地服务器",
+  "buttons": [
+    {
+      "id": "open-chat-manager",
+      "name": "聊天管理器",
+      "visible": true
+    }
+  ]
+}
