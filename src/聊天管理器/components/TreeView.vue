@@ -7,17 +7,17 @@
 
     <TransitionGroup name="list" tag="div" class="tree-list">
       <div v-for="item in visible_nodes_with_info" :key="item.node.chat.file_id" class="tree-row">
-        <!-- 分支线单元格 - 根据深度动态设置宽度 -->
-        <div class="branch-cell" :style="{ width: item.node.depth * 20 + 'px' }">
+        <!-- 分支线单元格 - 宽度由子元素自动计算 -->
+        <div class="branch-cell">
           <!-- 祖先层级的垂直延续线 -->
           <div
             v-for="i in Math.max(0, item.node.depth - 1)"
             :key="'line-' + i"
-            class="continuation-line"
-            :class="{ active: item.ancestorContinuations[i - 1] }"
+            class="indent-unit"
+            :class="{ 'has-line': item.ancestorContinuations[i - 1] }"
           ></div>
           <!-- 当前节点的L形连接线 -->
-          <div v-if="item.node.depth > 0" class="branch-line" :class="{ 'is-last': item.isLastChild }"></div>
+          <div v-if="item.node.depth > 0" class="branch-unit" :class="{ 'is-last': item.isLastChild }"></div>
         </div>
         <!-- 卡片内容 -->
         <ChatCard
@@ -115,24 +115,26 @@ function toggle_select(node: ChatTreeNode) {
   align-self: stretch;
 }
 
-// 延续线和分支线的公共样式
-.continuation-line,
-.branch-line {
-  display: block; // 确保能正确获取高度
+// 缩进单元和分支单元的公共样式
+.indent-unit,
+.branch-unit {
+  display: inline-block;
   position: relative;
-  flex: 0 0 20px; // 固定宽度，不压缩不拉伸
   width: 20px;
-  min-height: 100%;
+  min-width: 20px;
+  max-width: 20px;
+  height: 100%;
+  min-height: 40px; // 确保最小高度
 }
 
-// 祖先延续线容器
-.continuation-line {
+// 祖先延续线 - 纯缩进或带垂直线
+.indent-unit {
   // 有后续兄弟节点时显示垂直线
-  &.active::after {
+  &.has-line::after {
     content: '';
     position: absolute;
     left: 50%;
-    top: -1px; // 延伸超出边界消除间隙
+    top: -1px;
     bottom: -1px;
     width: 2px;
     transform: translateX(-50%);
@@ -141,13 +143,13 @@ function toggle_select(node: ChatTreeNode) {
 }
 
 // L形连接线
-.branch-line {
+.branch-unit {
   // 垂直部分
   &::before {
     content: '';
     position: absolute;
     left: 50%;
-    top: -1px; // 延伸超出边界消除间隙
+    top: -1px;
     width: 2px;
     height: calc(50% + 1px);
     transform: translateX(-50%);
@@ -168,7 +170,7 @@ function toggle_select(node: ChatTreeNode) {
 
   // 非最后一个子节点：垂直线贯穿整个高度
   &:not(.is-last)::before {
-    height: calc(100% + 2px); // 延伸超出边界
+    height: calc(100% + 2px);
     bottom: -1px;
   }
 }
