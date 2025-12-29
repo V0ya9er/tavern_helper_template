@@ -122,18 +122,18 @@ function toggle_select(node: ChatTreeNode) {
   flex: 0 0 20px; // 固定宽度 20px
   position: relative;
   width: 20px;
-  align-self: stretch; // 撑满父容器高度
+  min-height: 60px; // 确保最小高度
 }
 
 // 祖先延续线 - 纯缩进或带垂直线
 .indent-unit {
   // 有后续兄弟节点时显示垂直线
-  &.has-line::after {
+  &.has-line::before {
     content: '';
     position: absolute;
     left: 50%;
-    top: -1px;
-    bottom: -1px;
+    top: 0;
+    bottom: 0;
     width: 2px;
     transform: translateX(-50%);
     background: rgba(0, 200, 200, 0.5);
@@ -142,19 +142,19 @@ function toggle_select(node: ChatTreeNode) {
 
 // L形连接线
 .branch-unit {
-  // 垂直部分
+  // 垂直部分 - 从顶部到中间
   &::before {
     content: '';
     position: absolute;
     left: 50%;
-    top: -1px;
+    top: 0;
     width: 2px;
-    height: calc(50% + 1px);
+    height: 50%;
     transform: translateX(-50%);
     background: rgba(0, 200, 200, 0.5);
   }
 
-  // 水平部分
+  // 水平部分 - 从中间到右边
   &::after {
     content: '';
     position: absolute;
@@ -168,8 +168,7 @@ function toggle_select(node: ChatTreeNode) {
 
   // 非最后一个子节点：垂直线贯穿整个高度
   &:not(.is-last)::before {
-    height: calc(100% + 2px);
-    bottom: -1px;
+    height: 100%;
   }
 }
 
