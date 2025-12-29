@@ -5,26 +5,35 @@
       'is-current': node.chat.is_current,
       'is-selected': node.is_selected,
       'is-checkpoint': node.chat.is_checkpoint,
+      'has-children': node.children.length > 0,
     }"
-    :style="{ paddingLeft: `${node.depth * 20 + 8}px` }"
   >
+    <!-- 树形连接线区域 -->
+    <div class="tree-lines" :style="{ width: `${node.depth * 20}px` }">
+      <template v-for="level in node.depth" :key="level">
+        <span
+          class="tree-line"
+          :class="{ 'has-continuation': shouldShowContinuation(level - 1) }"
+          :style="{ left: `${(level - 1) * 20 + 10}px` }"
+        ></span>
+      </template>
+      <!-- 水平连接线 -->
+      <span
+        v-if="node.depth > 0"
+        class="tree-branch"
+        :class="{ 'is-last': isLastChild }"
+        :style="{ left: `${(node.depth - 1) * 20 + 10}px` }"
+      ></span>
+    </div>
+
     <!-- 展开/折叠按钮 -->
-    <button
-      v-if="node.children.length > 0"
-      class="expand-btn"
-      @click.stop="$emit('toggle-expand')"
-    >
+    <button v-if="node.children.length > 0" class="expand-btn" @click.stop="$emit('toggle-expand')">
       <i :class="node.is_expanded ? 'fa fa-chevron-down' : 'fa fa-chevron-right'"></i>
     </button>
     <span v-else class="expand-placeholder"></span>
 
     <!-- 选择框 -->
-    <input
-      type="checkbox"
-      :checked="node.is_selected"
-      @change="$emit('toggle-select')"
-      @click.stop
-    />
+    <input type="checkbox" :checked="node.is_selected" @change="$emit('toggle-select')" @click.stop />
 
     <!-- 图标 -->
     <i :class="icon_class" class="chat-icon"></i>
@@ -63,12 +72,7 @@
       <button class="action-btn" title="重命名" @click.stop="$emit('rename')">
         <i class="fa fa-pencil"></i>
       </button>
-      <button
-        class="action-btn danger"
-        title="删除"
-        @click.stop="$emit('delete')"
-        :disabled="node.chat.is_current"
-      >
+      <button class="action-btn danger" title="删除" :disabled="node.chat.is_current" @click.stop="$emit('delete')">
         <i class="fa fa-trash-o"></i>
       </button>
     </div>
@@ -80,14 +84,22 @@ import type { ChatTreeNode } from '../data/types';
 
 const props = defineProps<{
   node: ChatTreeNode;
+  isLastChild?: boolean;
+  ancestorContinuations?: boolean[];
 }>();
+
+// 判断某一层级是否需要显示垂直延续线
+function shouldShowContinuation(level: number): boolean {
+  if (!props.ancestorContinuations) return false;
+  return props.ancestorContinuations[level] ?? false;
+}
 
 defineEmits<{
   'toggle-expand': [];
   'toggle-select': [];
-  'open': [];
-  'rename': [];
-  'delete': [];
+  open: [];
+  rename: [];
+  delete: [];
 }>();
 
 const icon_class = computed(() => {
@@ -124,9 +136,11 @@ function format_time(date: Date): string {
   align-items: center;
   gap: 8px;
   padding: 8px;
+  padding-left: 8px;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.15s ease;
+  position: relative;
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.05);
@@ -165,6 +179,58 @@ function format_time(date: Date): string {
 
 .expand-placeholder {
   width: 20px;
+}
+
+// 树形连接线容器
+.tree-lines {
+  position: relative;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+// 垂直线
+.tree-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: transparent;
+
+  &.has-continuation {
+    background: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
+  }
+}
+
+// 水平分支线
+.tree-branch {
+  position: absolute;
+  width: 10px;
+  height: 1px;
+  top: 50%;
+  background: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 1px;
+    background: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
+  }
+
+  // 非最后一个子节点：垂直线从上到下
+  &:not(.is-last)::before {
+    top: -50vh;
+    bottom: 0;
+    height: calc(50vh + 1px);
+  }
+
+  // 最后一个子节点：垂直线只到中点
+  &.is-last::before {
+    bottom: 0;
+    height: 50vh;
+    top: auto;
+    transform: translateY(-100%);
+  }
 }
 
 input[type='checkbox'] {

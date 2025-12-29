@@ -7,14 +7,16 @@
 
     <TransitionGroup name="list" tag="div" class="tree-list">
       <ChatCard
-        v-for="node in visible_nodes"
-        :key="node.chat.file_name"
-        :node="node"
-        @toggle-expand="toggle_expand(node)"
-        @toggle-select="toggle_select(node)"
-        @open="$emit('open-chat', node.chat.file_name)"
-        @rename="$emit('rename-chat', node.chat.file_name)"
-        @delete="$emit('delete-chat', node.chat.file_name)"
+        v-for="item in visible_nodes_with_info"
+        :key="item.node.chat.file_id"
+        :node="item.node"
+        :is-last-child="item.isLastChild"
+        :ancestor-continuations="item.ancestorContinuations"
+        @toggle-expand="toggle_expand(item.node)"
+        @toggle-select="toggle_select(item.node)"
+        @open="$emit('open-chat', item.node.chat.file_id)"
+        @rename="$emit('rename-chat', item.node.chat.file_id)"
+        @delete="$emit('delete-chat', item.node.chat.file_id)"
       />
     </TransitionGroup>
   </div>
@@ -34,15 +36,31 @@ defineEmits<{
   'delete-chat': [file_name: string];
 }>();
 
-// 可见节点（展开的节点及其可见子节点）
-const visible_nodes = computed(() => {
-  const result: ChatTreeNode[] = [];
+// 带有连接线信息的可见节点
+interface VisibleNodeInfo {
+  node: ChatTreeNode;
+  isLastChild: boolean;
+  ancestorContinuations: boolean[];
+}
 
-  function traverse(nodes: ChatTreeNode[]) {
-    for (const node of nodes) {
-      result.push(node);
+// 可见节点（展开的节点及其可见子节点，附带连接线信息）
+const visible_nodes_with_info = computed(() => {
+  const result: VisibleNodeInfo[] = [];
+
+  function traverse(nodes: ChatTreeNode[], continuations: boolean[] = []) {
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      const isLast = i === nodes.length - 1;
+
+      result.push({
+        node,
+        isLastChild: isLast,
+        ancestorContinuations: [...continuations],
+      });
+
       if (node.is_expanded && node.children.length > 0) {
-        traverse(node.children);
+        // 传递给子节点的延续信息：当前层级不是最后一个，则需要延续线
+        traverse(node.children, [...continuations, !isLast]);
       }
     }
   }

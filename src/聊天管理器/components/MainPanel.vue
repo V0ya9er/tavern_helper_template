@@ -15,16 +15,8 @@
     <div class="toolbar">
       <div class="search-box">
         <i class="fa fa-search"></i>
-        <input
-          v-model="store.search_keyword"
-          type="text"
-          placeholder="搜索聊天..."
-        />
-        <button
-          v-if="store.search_keyword"
-          class="clear-btn"
-          @click="store.search_keyword = ''"
-        >
+        <input v-model="store.search_keyword" type="text" placeholder="搜索聊天..." />
+        <button v-if="store.search_keyword" class="clear-btn" @click="store.search_keyword = ''">
           <i class="fa fa-times-circle"></i>
         </button>
       </div>
@@ -37,11 +29,7 @@
           <option value="message_count">按消息数</option>
         </select>
 
-        <button
-          class="icon-btn"
-          :title="sort_order === 'desc' ? '降序' : '升序'"
-          @click="toggle_sort_order"
-        >
+        <button class="icon-btn" :title="sort_order === 'desc' ? '降序' : '升序'" @click="toggle_sort_order">
           <i :class="sort_order === 'desc' ? 'fa fa-sort-amount-desc' : 'fa fa-sort-amount-asc'"></i>
         </button>
 
@@ -64,29 +52,17 @@
       </label>
 
       <div class="batch-actions">
-        <button
-          class="batch-btn"
-          :disabled="store.selected_count === 0"
-          @click="store.expandAll(true)"
-        >
+        <button class="batch-btn" :disabled="store.selected_count === 0" @click="store.expandAll(true)">
           <i class="fa fa-expand"></i>
           展开全部
         </button>
 
-        <button
-          class="batch-btn"
-          :disabled="store.selected_count === 0"
-          @click="store.expandAll(false)"
-        >
+        <button class="batch-btn" :disabled="store.selected_count === 0" @click="store.expandAll(false)">
           <i class="fa fa-compress"></i>
           折叠全部
         </button>
 
-        <button
-          class="batch-btn danger"
-          :disabled="store.selected_count === 0"
-          @click="store.deleteSelected()"
-        >
+        <button class="batch-btn danger" :disabled="store.selected_count === 0" @click="store.deleteSelected()">
           <i class="fa fa-trash-o"></i>
           删除选中 ({{ store.selected_count }})
         </button>
@@ -94,8 +70,8 @@
     </div>
 
     <!-- 聊天列表 -->
-    <TreeView
-      :nodes="store.tree_nodes"
+    <ForestView
+      :forest="store.forest"
       @open-chat="handle_open_chat"
       @rename-chat="handle_rename_chat"
       @delete-chat="handle_delete_chat"
@@ -107,16 +83,27 @@
         <i class="fa fa-exclamation-triangle"></i>
         {{ store.error_message }}
       </span>
-      <span v-else>
-        已选中 {{ store.selected_count }} 个 | 共 {{ store.total_count }} 个聊天
-      </span>
+      <template v-else>
+        <span>已选中 {{ store.selected_count }} 个 | 共 {{ store.total_count }} 个聊天</span>
+        <span v-if="store.cache_time" class="cache-info">
+          <i class="fa fa-database"></i>
+          缓存: {{ format_cache_time(store.cache_time) }}
+          <button
+            v-if="store.is_background_loading"
+            class="refreshing-indicator"
+            disabled
+          >
+            <i class="fa fa-refresh fa-spin"></i>
+          </button>
+        </span>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useChatManagerStore } from '../store';
-import TreeView from './TreeView.vue';
+import ForestView from './ForestView.vue';
 
 defineEmits<{
   close: [];
@@ -127,14 +114,14 @@ const store = useChatManagerStore();
 // 排序
 const sort_by = computed({
   get: () => store.sort_config.by,
-  set: (value) => {
+  set: value => {
     store.sort_config.by = value;
   },
 });
 
 const sort_order = computed({
   get: () => store.sort_config.order,
-  set: (value) => {
+  set: value => {
     store.sort_config.order = value;
   },
 });
@@ -144,25 +131,21 @@ function toggle_sort_order() {
 }
 
 // 选择状态
-const is_all_selected = computed(() =>
-  store.total_count > 0 && store.selected_count === store.total_count
-);
+const is_all_selected = computed(() => store.total_count > 0 && store.selected_count === store.total_count);
 
-const is_partial_selected = computed(() =>
-  store.selected_count > 0 && store.selected_count < store.total_count
-);
+const is_partial_selected = computed(() => store.selected_count > 0 && store.selected_count < store.total_count);
 
 function toggle_select_all() {
   store.selectAll(!is_all_selected.value);
 }
 
 // 操作处理
-async function handle_open_chat(file_name: string) {
-  await store.openChat(file_name);
+async function handle_open_chat(file_id: string) {
+  await store.openChat(file_id);
 }
 
-async function handle_rename_chat(file_name: string) {
-  const chat = store.chats.find(c => c.file_name === file_name);
+async function handle_rename_chat(file_id: string) {
+  const chat = store.chats.find(c => c.file_id === file_id);
   if (!chat) return;
 
   const new_name = await SillyTavern.callGenericPopup(
@@ -172,12 +155,12 @@ async function handle_rename_chat(file_name: string) {
   );
 
   if (new_name && typeof new_name === 'string' && new_name.trim()) {
-    await store.renameChat(file_name, new_name.trim());
+    await store.renameChat(file_id, new_name.trim());
   }
 }
 
-async function handle_delete_chat(file_name: string) {
-  const chat = store.chats.find(c => c.file_name === file_name);
+async function handle_delete_chat(file_id: string) {
+  const chat = store.chats.find(c => c.file_id === file_id);
   if (!chat) return;
 
   if (chat.is_current) {
@@ -197,11 +180,22 @@ async function handle_delete_chat(file_name: string) {
   }
 
   try {
-    await store.deleteChats([file_name]);
+    await store.deleteChats([file_id]);
     toastr.success('已删除聊天');
   } catch {
     toastr.error('删除失败');
   }
+}
+
+// 格式化缓存时间
+function format_cache_time(date: Date): string {
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diff < 5) return '刚刚';
+  if (diff < 60) return `${diff}秒前`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+  return '已过期';
 }
 
 // 初始化
@@ -214,10 +208,9 @@ onMounted(() => {
 .chat-manager-panel {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  max-width: 600px;
-  height: 80vh;
-  max-height: 700px;
+  width: 95vw;
+  max-width: 1200px;
+  height: 90vh;
   background: var(--SmartThemeBlurTintColor, #1a1a2e);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -408,6 +401,9 @@ onMounted(() => {
 }
 
 .status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 10px 16px;
   font-size: 12px;
   color: var(--SmartThemeBodyColor, #888);
@@ -422,6 +418,24 @@ onMounted(() => {
     i {
       margin-right: 4px;
     }
+  }
+
+  .cache-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    i {
+      margin-right: 3px;
+    }
+  }
+
+  .refreshing-indicator {
+    background: transparent;
+    border: none;
+    color: inherit;
+    padding: 0;
+    margin-left: 4px;
   }
 }
 </style>

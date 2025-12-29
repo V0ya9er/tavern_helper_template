@@ -1,15 +1,31 @@
 import type { ChatInfo } from './types';
 
 /**
+ * 清理文件名中重复的 .jsonl 后缀
+ * 返回基础名称（不带后缀）和完整文件名（只有一个 .jsonl 后缀）
+ */
+function cleanFileName(name: string): { base: string; full: string } {
+  let base = name;
+  // 移除所有 .jsonl 后缀
+  while (base.endsWith('.jsonl')) {
+    base = base.slice(0, -6);
+  }
+  return {
+    base,
+    full: `${base}.jsonl`,
+  };
+}
+
+/**
  * 解析聊天文件名中的时间戳
  * 酒馆聊天文件名格式通常为: 角色名 - 时间戳.jsonl
  */
 function parseFileTimestamp(file_name: string): Date | null {
   // 尝试匹配常见的时间戳格式
   const patterns = [
-    /(\d{4}-\d{2}-\d{2})@(\d{2})h(\d{2})m(\d{2})s/,  // 2024-12-28@10h30m45s
-    /(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/,   // 20241228-103045
-    /(\d{13})/,                                       // Unix timestamp in ms
+    /(\d{4}-\d{2}-\d{2})@(\d{2})h(\d{2})m(\d{2})s/, // 2024-12-28@10h30m45s
+    /(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/, // 20241228-103045
+    /(\d{13})/, // Unix timestamp in ms
   ];
 
   for (const pattern of patterns) {
@@ -35,7 +51,7 @@ function parseFileTimestamp(file_name: string): Date | null {
 function extractDisplayName(file_name: string, char_name: string): string {
   let name = file_name
     .replace(/\.jsonl?$/, '')
-    .replace(/\d{4}-\d{2}-\d{2}@\d{2}h\d{2}m\d{2}s/, '')
+    .replace(/\d{4}-\d{2}-\d{2}@\d{2}h\d{2}m\d{2}s\s*\d*ms/, '')
     .replace(/\d{13}/, '')
     .replace(new RegExp(`^${_.escapeRegExp(char_name)}\\s*-?\\s*`), '')
     .trim();
@@ -81,9 +97,35 @@ function detectBranchInfo(file_name: string): { is_checkpoint: boolean; parent_h
 }
 
 /**
- * 获取当前角色的所有聊天记录
+ * 使用 SillyTavern 原生 API 获取带 metadata 的聊天列表
+ * 这样可以获取 chat_metadata.main_chat 来确定分支关系
  */
-export async function fetchChatList(preview_length = 50): Promise<ChatInfo[]> {
+async function fetchChatsWithMetadata(): Promise<any[]> {
+  try {
+    const response = await fetch('/api/chats/recent', {
+      method: 'POST',
+      headers: SillyTavern.getRequestHeaders(),
+      body: JSON.stringify({ metadata: true, max: 9999 }),
+    });
+
+    if (!response.ok) {
+      console.warn('[聊天管理器] 获取聊天 metadata 失败:', response.status);
+      return [];
+    }
+
+    return await response.json();
+  } catch (e) {
+    console.error('[聊天管理器] 获取聊天 metadata 出错:', e);
+    return [];
+  }
+}
+
+/**
+ * 获取当前角色的所有聊天记录
+ * 使用 SillyTavern 原生 API 获取带 metadata 的聊天列表
+ * 以便获取 chat_metadata.main_chat 确定分支关系
+ */
+export async function fetchChatList(preview_length = 100): Promise<ChatInfo[]> {
   const char_data = getCharData('current');
   if (!char_data) {
     console.warn('[聊天管理器] 未选择角色卡');
@@ -91,57 +133,105 @@ export async function fetchChatList(preview_length = 50): Promise<ChatInfo[]> {
   }
 
   const char_name = char_data.name;
+  const char_avatar = char_data.avatar;
   const current_chat = char_data.chat;
+  console.info('[聊天管理器] 当前角色:', char_name, '当前聊天:', current_chat);
 
-  // 获取聊天历史摘要
-  const chat_briefs = await getChatHistoryBrief('current');
-  if (!chat_briefs || chat_briefs.length === 0) {
-    console.info('[聊天管理器] 该角色没有聊天记录');
-    return [];
+  // 使用原生 API 获取带 metadata 的聊天列表
+  const all_chats = await fetchChatsWithMetadata();
+
+  // 筛选当前角色的聊天
+  const char_chats = all_chats.filter((c: any) => c.avatar === char_avatar);
+
+  if (char_chats.length === 0) {
+    // 回退到 getChatHistoryBrief
+    console.info('[聊天管理器] 原生 API 无数据，回退到 getChatHistoryBrief');
+    const chat_briefs = await getChatHistoryBrief('current');
+    if (!chat_briefs || chat_briefs.length === 0) {
+      console.info('[聊天管理器] 该角色没有聊天记录');
+      return [];
+    }
+    return parseBriefChats(chat_briefs, char_name, current_chat, preview_length);
   }
 
-  // 获取聊天详情
-  const chat_details = await getChatHistoryDetail(chat_briefs, false);
-  if (!chat_details) {
-    console.warn('[聊天管理器] 无法获取聊天详情');
-    return [];
-  }
+  console.info('[聊天管理器] 获取到', char_chats.length, '个聊天记录 (带 metadata)');
 
   const result: ChatInfo[] = [];
 
-  for (const brief of chat_briefs) {
-    const file_name = brief.file_name as string;
-    const messages = chat_details[file_name] as SillyTavern.ChatMessage[] | undefined;
+  for (const chat of char_chats) {
+    // 使用统一的清理函数处理 file_id
+    const raw_file_id = chat.file_id as string;
+    const { base: file_id, full: file_name } = cleanFileName(raw_file_id);
 
-    if (!messages || messages.length === 0) continue;
+    console.debug(`[聊天管理器] 清理文件名: "${raw_file_id}" -> file_id="${file_id}", file_name="${file_name}"`);
 
-    const first_msg = messages[0];
-    const last_msg = messages[messages.length - 1];
-    const { is_checkpoint, parent_hint } = detectBranchInfo(file_name);
+    const message_count = chat.chat_items || 0;
+    const mes_preview = chat.mes || '';
+
+    // 从 chat_metadata 获取父聊天
+    const main_chat = chat.chat_metadata?.main_chat as string | undefined;
+
+    const { is_checkpoint } = detectBranchInfo(file_name);
 
     // 解析时间
     const file_timestamp = parseFileTimestamp(file_name);
-    const created_at = file_timestamp || new Date(brief.file_size ? Date.now() : 0);
-
-    // 尝试从消息中获取更新时间
-    let updated_at = created_at;
-    if (last_msg.extra?.gen_started) {
-      updated_at = new Date(last_msg.extra.gen_started);
-    } else if (last_msg.extra?.gen_finished) {
-      updated_at = new Date(last_msg.extra.gen_finished);
-    }
+    const created_at = file_timestamp || new Date();
 
     result.push({
+      file_id,
       file_name,
       display_name: extractDisplayName(file_name, char_name),
       created_at,
-      updated_at,
-      message_count: messages.length,
-      first_message_preview: truncatePreview(first_msg.mes || '', preview_length),
-      last_message_preview: truncatePreview(last_msg.mes || '', preview_length),
+      updated_at: created_at,
+      message_count,
+      first_message_preview: truncatePreview(mes_preview, preview_length),
+      last_message_preview: truncatePreview(mes_preview, preview_length),
+      parent_chat: main_chat, // 使用 chat_metadata.main_chat
+      is_checkpoint,
+      is_current: file_id === current_chat || file_name === current_chat,
+    });
+  }
+
+  console.info('[聊天管理器] 解析完成，共', result.length, '个聊天记录');
+  return result;
+}
+
+/**
+ * 解析 brief 格式的聊天数据（回退方案）
+ */
+function parseBriefChats(
+  chat_briefs: any[],
+  char_name: string,
+  current_chat: string,
+  preview_length: number,
+): ChatInfo[] {
+  const result: ChatInfo[] = [];
+
+  for (const brief of chat_briefs) {
+    // 使用统一的清理函数处理
+    const raw_file_id = brief.file_id as string;
+    const { base: file_id, full: file_name } = cleanFileName(raw_file_id);
+
+    const message_count = brief.chat_items || 0;
+    const mes_preview = brief.mes || '';
+
+    const { is_checkpoint, parent_hint } = detectBranchInfo(file_name);
+
+    const file_timestamp = parseFileTimestamp(file_name);
+    const created_at = file_timestamp || new Date();
+
+    result.push({
+      file_id,
+      file_name,
+      display_name: extractDisplayName(file_name, char_name),
+      created_at,
+      updated_at: created_at,
+      message_count,
+      first_message_preview: truncatePreview(mes_preview, preview_length),
+      last_message_preview: truncatePreview(mes_preview, preview_length),
       parent_chat: parent_hint,
       is_checkpoint,
-      is_current: file_name === current_chat,
+      is_current: file_id === current_chat || file_name === current_chat,
     });
   }
 
@@ -149,65 +239,36 @@ export async function fetchChatList(preview_length = 50): Promise<ChatInfo[]> {
 }
 
 /**
- * 通过比较消息内容检测分支关系
+ * 基于 chat_metadata.main_chat 检测分支关系
+ *
+ * 数据来源：fetchChatList 已经从 API 获取了 parent_chat 字段
+ * 此函数仅需将 parent_chat（父聊天 file_name）转换为 file_id
+ *
+ * @returns Map<子file_id, 父file_id>
  */
 export async function detectBranchRelations(chats: ChatInfo[]): Promise<Map<string, string>> {
   const relations = new Map<string, string>();
 
-  // 获取所有聊天的详细内容用于比对
-  const chat_briefs = await getChatHistoryBrief('current');
-  if (!chat_briefs) return relations;
-
-  const chat_details = await getChatHistoryDetail(chat_briefs, false);
-  if (!chat_details) return relations;
-
-  // 创建消息哈希映射
-  const message_hashes = new Map<string, string[]>();
-
+  // 构建 file_name -> file_id 映射
+  const name_to_id = new Map<string, string>();
   for (const chat of chats) {
-    const messages = chat_details[chat.file_name] as SillyTavern.ChatMessage[] | undefined;
-    if (!messages) continue;
-
-    // 取前 5 条消息的内容作为特征
-    const feature_messages = messages.slice(0, 5).map(m => m.mes || '');
-    message_hashes.set(chat.file_name, feature_messages);
+    // main_chat 存储的是不带扩展名的文件名
+    name_to_id.set(chat.file_id, chat.file_id);
+    name_to_id.set(chat.file_name, chat.file_id);
+    name_to_id.set(chat.file_name.replace(/\.jsonl?$/, ''), chat.file_id);
   }
 
-  // 比较每对聊天的相似性
-  const chat_files = Array.from(message_hashes.keys());
-  for (let i = 0; i < chat_files.length; i++) {
-    for (let j = i + 1; j < chat_files.length; j++) {
-      const file_a = chat_files[i];
-      const file_b = chat_files[j];
-      const msgs_a = message_hashes.get(file_a)!;
-      const msgs_b = message_hashes.get(file_b)!;
-
-      // 找到共同前缀长度
-      let common_prefix = 0;
-      const min_len = Math.min(msgs_a.length, msgs_b.length);
-      for (let k = 0; k < min_len; k++) {
-        if (msgs_a[k] === msgs_b[k]) {
-          common_prefix++;
-        } else {
-          break;
-        }
-      }
-
-      // 如果有共同前缀，说明存在分支关系
-      if (common_prefix >= 2) {
-        const chat_a = chats.find(c => c.file_name === file_a)!;
-        const chat_b = chats.find(c => c.file_name === file_b)!;
-
-        // 消息更多的是父聊天（或创建时间更早的）
-        if (chat_a.message_count > chat_b.message_count ||
-            (chat_a.message_count === chat_b.message_count && chat_a.created_at < chat_b.created_at)) {
-          relations.set(file_b, file_a);
-        } else {
-          relations.set(file_a, file_b);
-        }
+  // 建立分支关系
+  for (const chat of chats) {
+    if (chat.parent_chat) {
+      const parent_id = name_to_id.get(chat.parent_chat);
+      if (parent_id && parent_id !== chat.file_id) {
+        relations.set(chat.file_id, parent_id);
+        console.info(`[聊天管理器] 分支关系: ${chat.file_id} -> ${parent_id}`);
       }
     }
   }
 
+  console.info(`[聊天管理器] 检测到 ${relations.size} 个分支关系`);
   return relations;
 }

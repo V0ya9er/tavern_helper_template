@@ -2,7 +2,9 @@
  * 聊天记录基本信息
  */
 export interface ChatInfo {
-  /** 聊天文件名 */
+  /** 聊天 ID（不带扩展名，用于 API 调用） */
+  file_id: string;
+  /** 聊天文件名（带扩展名） */
   file_name: string;
   /** 显示名称（去除时间戳等） */
   display_name: string;
@@ -83,3 +85,48 @@ export const DEFAULT_SETTINGS: ChatManagerSettings = {
   show_checkpoints: true,
   confirm_delete: true,
 };
+
+/**
+ * 聊天森林 - 一组独立的对话树
+ */
+export interface ChatForest {
+  /** 森林中的所有树（每棵树是一个根节点及其子节点） */
+  trees: ChatTree[];
+  /** 总聊天数 */
+  total_count: number;
+}
+
+/**
+ * 聊天树 - 一棵独立的对话树
+ */
+export interface ChatTree {
+  /** 树的唯一标识（根节点的 file_id） */
+  id: string;
+  /** 根节点 */
+  root: ChatTreeNode;
+  /** 树的显示名称（取自根节点） */
+  display_name: string;
+  /** 树中的节点总数 */
+  node_count: number;
+  /** 树中最新的更新时间 */
+  latest_update: Date;
+  /** 是否包含当前聊天 */
+  has_current: boolean;
+  /** 是否展开 */
+  is_expanded: boolean;
+}
+
+/**
+ * 缓存数据结构
+ */
+export interface ChatCache {
+  /** 缓存的聊天数据 */
+  chats: ChatInfo[];
+  /** 缓存时间戳 */
+  timestamp: number;
+  /** 对应的角色名 */
+  character: string;
+}
+
+/** 缓存有效期（5分钟） */
+export const CACHE_TTL = 5 * 60 * 1000;
