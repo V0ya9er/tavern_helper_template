@@ -344,7 +344,7 @@ function format_time(date: Date): string {
     position: absolute;
     left: 50%;
     top: 50%;
-    right: -12px; // 延伸进入卡片的 margin 区域
+    right: -20px; // 延伸进入卡片的 margin 区域
     height: 2px;
     transform: translateY(-50%);
     background: rgba(0, 200, 200, 0.5);
