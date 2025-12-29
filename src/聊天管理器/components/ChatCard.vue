@@ -115,7 +115,7 @@ function format_time(date: Date): string {
   transition: background-color 0.15s ease;
   position: relative;
   flex: 1; // 让卡片填充剩余空间
-  margin-left: 4px; // 与分支线保持小间距
+  margin-left: 12px; // 与分支线保持足够间距，确保分支点可见
   background-color: rgba(255, 255, 255, 0.02); // 默认背景让边界更清晰
 
   &:hover {

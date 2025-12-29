@@ -14,7 +14,7 @@
             v-for="i in Math.max(0, item.node.depth - 1)"
             :key="'line-' + i"
             class="indent-unit"
-            :class="{ 'has-line': item.ancestorContinuations[i - 1] }"
+            :class="{ 'has-line': item.ancestorContinuations[i] }"
           ></div>
           <!-- 当前节点的L形连接线 -->
           <div v-if="item.node.depth > 0" class="branch-unit" :class="{ 'is-last': item.isLastChild }"></div>
@@ -154,13 +154,13 @@ function toggle_select(node: ChatTreeNode) {
     background: rgba(0, 200, 200, 0.5);
   }
 
-  // 水平部分 - 从中间到右边
+  // 水平部分 - 从中间延伸到卡片
   &::after {
     content: '';
     position: absolute;
     left: 50%;
     top: 50%;
-    right: 0;
+    right: -12px; // 延伸进入卡片的 margin 区域
     height: 2px;
     transform: translateY(-50%);
     background: rgba(0, 200, 200, 0.5);
