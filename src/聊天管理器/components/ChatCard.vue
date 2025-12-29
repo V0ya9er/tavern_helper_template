@@ -9,20 +9,19 @@
     }"
   >
     <!-- 树形连接线区域 -->
-    <div class="tree-lines" :style="{ width: `${node.depth * 20}px` }">
-      <template v-for="level in node.depth" :key="level">
-        <span
-          class="tree-line"
-          :class="{ 'has-continuation': shouldShowContinuation(level - 1) }"
-          :style="{ left: `${(level - 1) * 20 + 10}px` }"
-        ></span>
-      </template>
-      <!-- 水平连接线 -->
+    <div class="tree-lines">
+      <!-- 祖先层级的垂直延续线 -->
+      <span
+        v-for="index in Math.max(0, node.depth - 1)"
+        :key="'line-' + index"
+        class="tree-line"
+        :class="{ 'has-continuation': shouldShowContinuation(index - 1) }"
+      ></span>
+      <!-- 当前节点的L形连接线 -->
       <span
         v-if="node.depth > 0"
         class="tree-branch"
         :class="{ 'is-last': isLastChild }"
-        :style="{ left: `${(node.depth - 1) * 20 + 10}px` }"
       ></span>
     </div>
 
@@ -181,55 +180,63 @@ function format_time(date: Date): string {
   width: 20px;
 }
 
-// 树形连接线容器
+// 树形连接线容器 - 使用 flex 布局
 .tree-lines {
-  position: relative;
-  height: 100%;
+  display: flex;
   flex-shrink: 0;
+  align-self: stretch;
 }
 
-// 垂直线
+// 每个层级的垂直延续线容器
 .tree-line {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: transparent;
+  position: relative;
+  width: 20px;
 
-  &.has-continuation {
+  // 垂直延续线（祖先层级还有后续兄弟节点时显示）
+  &.has-continuation::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    transform: translateX(-50%);
     background: rgba(0, 200, 200, 0.5);
   }
 }
 
-// 水平分支线
+// 当前节点的 L 形连接线
 .tree-branch {
-  position: absolute;
-  width: 10px;
-  height: 1px;
-  top: 50%;
-  background: rgba(0, 200, 200, 0.5);
+  position: relative;
+  width: 20px;
 
+  // 垂直部分（从顶部到中心）
   &::before {
     content: '';
     position: absolute;
-    left: 0;
-    width: 1px;
+    left: 50%;
+    top: 0;
+    width: 2px;
+    height: 50%;
+    transform: translateX(-50%);
     background: rgba(0, 200, 200, 0.5);
   }
 
-  // 非最后一个子节点：垂直线从上到下
-  &:not(.is-last)::before {
-    top: -50vh;
-    bottom: 0;
-    height: calc(50vh + 1px);
+  // 水平部分（从中心向右）
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    right: 0;
+    height: 2px;
+    transform: translateY(-50%);
+    background: rgba(0, 200, 200, 0.5);
   }
 
-  // 最后一个子节点：垂直线只到中点
-  &.is-last::before {
-    bottom: 0;
-    height: 50vh;
-    top: auto;
-    transform: translateY(-100%);
+  // 非最后一个子节点：垂直线贯穿整个高度
+  &:not(.is-last)::before {
+    height: 100%;
   }
 }
 
