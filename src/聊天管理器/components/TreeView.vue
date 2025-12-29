@@ -108,24 +108,31 @@ function toggle_select(node: ChatTreeNode) {
   align-items: stretch;
 }
 
-// 分支线单元格
+// 分支线单元格 - 独立于卡片，不受卡片背景影响
 .branch-cell {
   display: flex;
   flex-shrink: 0;
+  align-self: stretch;
+}
+
+// 延续线和分支线的公共样式
+.continuation-line,
+.branch-line {
+  display: block; // 确保能正确获取高度
+  position: relative;
+  width: 20px;
+  min-height: 100%;
 }
 
 // 祖先延续线容器
 .continuation-line {
-  position: relative;
-  width: 20px;
-
   // 有后续兄弟节点时显示垂直线
   &.active::after {
     content: '';
     position: absolute;
     left: 50%;
-    top: 0;
-    bottom: 0;
+    top: -1px; // 延伸超出边界消除间隙
+    bottom: -1px;
     width: 2px;
     transform: translateX(-50%);
     background: rgba(0, 200, 200, 0.5);
@@ -134,17 +141,14 @@ function toggle_select(node: ChatTreeNode) {
 
 // L形连接线
 .branch-line {
-  position: relative;
-  width: 20px;
-
   // 垂直部分
   &::before {
     content: '';
     position: absolute;
     left: 50%;
-    top: 0;
+    top: -1px; // 延伸超出边界消除间隙
     width: 2px;
-    height: 50%;
+    height: calc(50% + 1px);
     transform: translateX(-50%);
     background: rgba(0, 200, 200, 0.5);
   }
@@ -163,7 +167,8 @@ function toggle_select(node: ChatTreeNode) {
 
   // 非最后一个子节点：垂直线贯穿整个高度
   &:not(.is-last)::before {
-    height: 100%;
+    height: calc(100% + 2px); // 延伸超出边界
+    bottom: -1px;
   }
 }
 

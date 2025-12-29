@@ -109,16 +109,17 @@ function format_time(date: Date): string {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px;
-  padding-left: 4px; // 减小左侧内边距
+  padding: 8px 8px 8px 6px;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.15s ease;
   position: relative;
   flex: 1; // 让卡片填充剩余空间
+  margin-left: 4px; // 与分支线保持小间距
+  background-color: rgba(255, 255, 255, 0.02); // 默认背景让边界更清晰
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.08);
   }
 
   &.is-selected {
