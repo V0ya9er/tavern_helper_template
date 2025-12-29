@@ -193,8 +193,8 @@ function format_time(date: Date): string {
     content: '';
     position: absolute;
     left: 50%;
-    top: 0;
-    bottom: 0;
+    top: -1px; // 向上延伸1px，填补卡片间隙
+    bottom: -1px; // 向下延伸1px，填补卡片间隙
     width: 2px;
     transform: translateX(-50%);
     background: rgba(0, 200, 200, 0.5);
@@ -211,9 +211,9 @@ function format_time(date: Date): string {
     content: '';
     position: absolute;
     left: 50%;
-    top: 0;
+    top: -1px; // 向上延伸1px，与上一个卡片连接
     width: 2px;
-    height: 50%;
+    height: calc(50% + 1px);
     transform: translateX(-50%);
     background: rgba(0, 200, 200, 0.5);
   }
@@ -230,9 +230,9 @@ function format_time(date: Date): string {
     background: rgba(0, 200, 200, 0.5);
   }
 
-  // 非最后一个子节点：垂直线贯穿整个高度
+  // 非最后一个子节点：垂直线贯穿整个高度并向下延伸
   &:not(.is-last)::before {
-    height: 100%;
+    height: calc(100% + 2px); // 向下延伸2px，确保与下一个卡片连接
   }
 }
 
