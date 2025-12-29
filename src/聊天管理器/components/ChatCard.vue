@@ -67,7 +67,7 @@
     <!-- 操作按钮 -->
     <div class="chat-actions">
       <button class="action-btn" title="打开" @click.stop="$emit('open')">
-        <i class="fa fa-external-link"></i>
+        <i class="fa fa-sign-out fa-flip-horizontal"></i>
       </button>
       <button class="action-btn" title="重命名" @click.stop="$emit('rename')">
         <i class="fa fa-pencil"></i>
@@ -197,7 +197,7 @@ function format_time(date: Date): string {
   background: transparent;
 
   &.has-continuation {
-    background: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
+    background: rgba(0, 200, 200, 0.5);
   }
 }
 
@@ -207,14 +207,14 @@ function format_time(date: Date): string {
   width: 10px;
   height: 1px;
   top: 50%;
-  background: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
+  background: rgba(0, 200, 200, 0.5);
 
   &::before {
     content: '';
     position: absolute;
     left: 0;
     width: 1px;
-    background: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
+    background: rgba(0, 200, 200, 0.5);
   }
 
   // 非最后一个子节点：垂直线从上到下
