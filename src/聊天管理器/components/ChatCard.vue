@@ -8,19 +8,6 @@
       'has-children': node.children.length > 0,
     }"
   >
-    <!-- 树形连接线区域 -->
-    <div class="tree-lines">
-      <!-- 祖先层级的垂直延续线 -->
-      <span
-        v-for="index in Math.max(0, node.depth - 1)"
-        :key="'line-' + index"
-        class="tree-line"
-        :class="{ 'has-continuation': shouldShowContinuation(index - 1) }"
-      ></span>
-      <!-- 当前节点的L形连接线 -->
-      <span v-if="node.depth > 0" class="tree-branch" :class="{ 'is-last': isLastChild }"></span>
-    </div>
-
     <!-- 展开/折叠按钮 -->
     <button v-if="node.children.length > 0" class="expand-btn" @click.stop="$emit('toggle-expand')">
       <i :class="node.is_expanded ? 'fa fa-chevron-down' : 'fa fa-chevron-right'"></i>
@@ -79,15 +66,7 @@ import type { ChatTreeNode } from '../data/types';
 
 const props = defineProps<{
   node: ChatTreeNode;
-  isLastChild?: boolean;
-  ancestorContinuations?: boolean[];
 }>();
-
-// 判断某一层级是否需要显示垂直延续线
-function shouldShowContinuation(level: number): boolean {
-  if (!props.ancestorContinuations) return false;
-  return props.ancestorContinuations[level] ?? false;
-}
 
 defineEmits<{
   'toggle-expand': [];
@@ -131,11 +110,12 @@ function format_time(date: Date): string {
   align-items: center;
   gap: 8px;
   padding: 8px;
-  padding-left: 8px;
+  padding-left: 4px; // 减小左侧内边距
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.15s ease;
   position: relative;
+  flex: 1; // 让卡片填充剩余空间
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.05);
@@ -174,66 +154,6 @@ function format_time(date: Date): string {
 
 .expand-placeholder {
   width: 20px;
-}
-
-// 树形连接线容器 - 使用 flex 布局
-.tree-lines {
-  display: flex;
-  flex-shrink: 0;
-  align-self: stretch;
-}
-
-// 每个层级的垂直延续线容器
-.tree-line {
-  position: relative;
-  width: 20px;
-
-  // 垂直延续线（祖先层级还有后续兄弟节点时显示）
-  &.has-continuation::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: -1px; // 向上延伸1px，填补卡片间隙
-    bottom: -1px; // 向下延伸1px，填补卡片间隙
-    width: 2px;
-    transform: translateX(-50%);
-    background: rgba(0, 200, 200, 0.5);
-  }
-}
-
-// 当前节点的 L 形连接线
-.tree-branch {
-  position: relative;
-  width: 20px;
-
-  // 垂直部分（从顶部到中心）
-  &::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: -1px; // 向上延伸1px，与上一个卡片连接
-    width: 2px;
-    height: calc(50% + 1px);
-    transform: translateX(-50%);
-    background: rgba(0, 200, 200, 0.5);
-  }
-
-  // 水平部分（从中心向右）
-  &::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    right: 0;
-    height: 2px;
-    transform: translateY(-50%);
-    background: rgba(0, 200, 200, 0.5);
-  }
-
-  // 非最后一个子节点：垂直线贯穿整个高度并向下延伸
-  &:not(.is-last)::before {
-    height: calc(100% + 2px); // 向下延伸2px，确保与下一个卡片连接
-  }
 }
 
 input[type='checkbox'] {

@@ -6,18 +6,29 @@
     </div>
 
     <TransitionGroup name="list" tag="div" class="tree-list">
-      <ChatCard
-        v-for="item in visible_nodes_with_info"
-        :key="item.node.chat.file_id"
-        :node="item.node"
-        :is-last-child="item.isLastChild"
-        :ancestor-continuations="item.ancestorContinuations"
-        @toggle-expand="toggle_expand(item.node)"
-        @toggle-select="toggle_select(item.node)"
-        @open="$emit('open-chat', item.node.chat.file_id)"
-        @rename="$emit('rename-chat', item.node.chat.file_id)"
-        @delete="$emit('delete-chat', item.node.chat.file_id)"
-      />
+      <div v-for="item in visible_nodes_with_info" :key="item.node.chat.file_id" class="tree-row">
+        <!-- 分支线单元格 -->
+        <div class="branch-cell">
+          <!-- 祖先层级的垂直延续线 -->
+          <span
+            v-for="i in Math.max(0, item.node.depth - 1)"
+            :key="'line-' + i"
+            class="continuation-line"
+            :class="{ active: item.ancestorContinuations[i - 1] }"
+          ></span>
+          <!-- 当前节点的L形连接线 -->
+          <span v-if="item.node.depth > 0" class="branch-line" :class="{ 'is-last': item.isLastChild }"></span>
+        </div>
+        <!-- 卡片内容 -->
+        <ChatCard
+          :node="item.node"
+          @toggle-expand="toggle_expand(item.node)"
+          @toggle-select="toggle_select(item.node)"
+          @open="$emit('open-chat', item.node.chat.file_id)"
+          @rename="$emit('rename-chat', item.node.chat.file_id)"
+          @delete="$emit('delete-chat', item.node.chat.file_id)"
+        />
+      </div>
     </TransitionGroup>
   </div>
 </template>
@@ -88,7 +99,72 @@ function toggle_select(node: ChatTreeNode) {
 .tree-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0; // 移除间隙，让分支线连续
+}
+
+// 每行：分支线 + 卡片
+.tree-row {
+  display: flex;
+  align-items: stretch;
+}
+
+// 分支线单元格
+.branch-cell {
+  display: flex;
+  flex-shrink: 0;
+}
+
+// 祖先延续线容器
+.continuation-line {
+  position: relative;
+  width: 20px;
+
+  // 有后续兄弟节点时显示垂直线
+  &.active::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    transform: translateX(-50%);
+    background: rgba(0, 200, 200, 0.5);
+  }
+}
+
+// L形连接线
+.branch-line {
+  position: relative;
+  width: 20px;
+
+  // 垂直部分
+  &::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 2px;
+    height: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 200, 200, 0.5);
+  }
+
+  // 水平部分
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    right: 0;
+    height: 2px;
+    transform: translateY(-50%);
+    background: rgba(0, 200, 200, 0.5);
+  }
+
+  // 非最后一个子节点：垂直线贯穿整个高度
+  &:not(.is-last)::before {
+    height: 100%;
+  }
 }
 
 .empty-state {
