@@ -1,7 +1,7 @@
 {
   "id": "chat-manager",
   "name": "聊天管理器",
-  "content": "import 'https://testingcf.jsdelivr.net/gh/V0ya9er/tavern_helper_template@5cf01a5/dist/聊天管理器/index.js'",
+  "content": "import 'https://testingcf.jsdelivr.net/gh/V0ya9er/tavern_helper_template@09af232/dist/聊天管理器/index.js'",
   "info": "酒馆聊天记录管理器 - 树形可视化、批量删除聊天分支",
   "buttons": [
     {

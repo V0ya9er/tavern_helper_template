@@ -7,17 +7,17 @@
 
     <TransitionGroup name="list" tag="div" class="tree-list">
       <div v-for="item in visible_nodes_with_info" :key="item.node.chat.file_id" class="tree-row">
-        <!-- 分支线单元格 -->
-        <div class="branch-cell">
+        <!-- 分支线单元格 - 根据深度动态设置宽度 -->
+        <div class="branch-cell" :style="{ width: item.node.depth * 20 + 'px' }">
           <!-- 祖先层级的垂直延续线 -->
-          <span
+          <div
             v-for="i in Math.max(0, item.node.depth - 1)"
             :key="'line-' + i"
             class="continuation-line"
             :class="{ active: item.ancestorContinuations[i - 1] }"
-          ></span>
+          ></div>
           <!-- 当前节点的L形连接线 -->
-          <span v-if="item.node.depth > 0" class="branch-line" :class="{ 'is-last': item.isLastChild }"></span>
+          <div v-if="item.node.depth > 0" class="branch-line" :class="{ 'is-last': item.isLastChild }"></div>
         </div>
         <!-- 卡片内容 -->
         <ChatCard
