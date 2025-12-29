@@ -18,11 +18,7 @@
         :class="{ 'has-continuation': shouldShowContinuation(index - 1) }"
       ></span>
       <!-- 当前节点的L形连接线 -->
-      <span
-        v-if="node.depth > 0"
-        class="tree-branch"
-        :class="{ 'is-last': isLastChild }"
-      ></span>
+      <span v-if="node.depth > 0" class="tree-branch" :class="{ 'is-last': isLastChild }"></span>
     </div>
 
     <!-- 展开/折叠按钮 -->
