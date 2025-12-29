@@ -103,12 +103,18 @@ export async function buildChatTree(
 
     if (chat.parent_chat && node_map.has(chat.parent_chat)) {
       const parent_node = node_map.get(chat.parent_chat)!;
-      node.depth = parent_node.depth + 1;
       parent_node.children.push(node);
     } else {
       roots.push(node);
     }
   }
+
+  // 重新计算所有节点的 depth（因为排序后子节点可能在父节点之前处理）
+  function updateDepthRecursive(node: ChatTreeNode, depth: number) {
+    node.depth = depth;
+    node.children.forEach(child => updateDepthRecursive(child, depth + 1));
+  }
+  roots.forEach(root => updateDepthRecursive(root, 0));
 
   // 对每个节点的子节点进行排序
   function sortChildren(node: ChatTreeNode) {
@@ -248,12 +254,18 @@ export async function buildChatForest(
 
     if (chat.parent_chat && node_map.has(chat.parent_chat)) {
       const parent_node = node_map.get(chat.parent_chat)!;
-      node.depth = parent_node.depth + 1;
       parent_node.children.push(node);
     } else {
       roots.push(node);
     }
   }
+
+  // 重新计算所有节点的 depth（因为排序后子节点可能在父节点之前处理）
+  function updateDepth(node: ChatTreeNode, depth: number) {
+    node.depth = depth;
+    node.children.forEach(child => updateDepth(child, depth + 1));
+  }
+  roots.forEach(root => updateDepth(root, 0));
 
   // 对每个节点的子节点进行排序（最新在前）
   function sortChildrenDesc(node: ChatTreeNode) {

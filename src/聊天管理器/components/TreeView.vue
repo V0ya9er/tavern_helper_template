@@ -112,19 +112,17 @@ function toggle_select(node: ChatTreeNode) {
 .branch-cell {
   display: flex;
   flex-shrink: 0;
+  flex-wrap: nowrap;
   align-self: stretch;
 }
 
 // 缩进单元和分支单元的公共样式
 .indent-unit,
 .branch-unit {
-  display: inline-block;
+  flex: 0 0 20px; // 固定宽度 20px
   position: relative;
   width: 20px;
-  min-width: 20px;
-  max-width: 20px;
-  height: 100%;
-  min-height: 40px; // 确保最小高度
+  align-self: stretch; // 撑满父容器高度
 }
 
 // 祖先延续线 - 纯缩进或带垂直线
