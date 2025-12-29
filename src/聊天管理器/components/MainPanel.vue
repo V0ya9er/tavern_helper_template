@@ -88,11 +88,7 @@
         <span v-if="store.cache_time" class="cache-info">
           <i class="fa fa-database"></i>
           缓存: {{ format_cache_time(store.cache_time) }}
-          <button
-            v-if="store.is_background_loading"
-            class="refreshing-indicator"
-            disabled
-          >
+          <button v-if="store.is_background_loading" class="refreshing-indicator" disabled>
             <i class="fa fa-refresh fa-spin"></i>
           </button>
         </span>

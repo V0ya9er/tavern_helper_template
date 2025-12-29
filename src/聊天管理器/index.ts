@@ -35,14 +35,14 @@ function openChatManager() {
   });
 
   // 点击背景关闭
-  $container.on('click', (e) => {
+  $container.on('click', e => {
     if (e.target === $container![0]) {
       closeChatManager();
     }
   });
 
   // 按 ESC 关闭
-  $(document).on('keydown.chat-manager', (e) => {
+  $(document).on('keydown.chat-manager', e => {
     if (e.key === 'Escape') {
       closeChatManager();
     }
@@ -87,9 +87,7 @@ function closeChatManager() {
 
 // 注册脚本按钮
 $(() => {
-  replaceScriptButtons([
-    { name: '聊天管理器', visible: true },
-  ]);
+  replaceScriptButtons([{ name: '聊天管理器', visible: true }]);
 
   eventOn(getButtonEvent('聊天管理器'), () => {
     errorCatched(openChatManager)();
