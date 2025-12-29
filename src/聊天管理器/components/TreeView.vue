@@ -18,6 +18,8 @@
           ></div>
           <!-- 当前节点的L形连接线 -->
           <div v-if="item.node.depth > 0" class="branch-unit" :class="{ 'is-last': item.isLastChild }"></div>
+          <!-- 如果有展开的子节点，画向下的连接线供子节点连接 -->
+          <div v-if="item.node.is_expanded && item.node.children.length > 0" class="child-connector"></div>
         </div>
         <!-- 卡片内容 -->
         <ChatCard
@@ -169,6 +171,25 @@ function toggle_select(node: ChatTreeNode) {
   // 非最后一个子节点：垂直线贯穿整个高度
   &:not(.is-last)::before {
     height: 100%;
+  }
+}
+
+// 子节点连接线 - 从中间向下延伸，供子节点的branch-unit连接
+.child-connector {
+  flex: 0 0 20px;
+  position: relative;
+  width: 20px;
+  min-height: 60px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    bottom: 0;
+    width: 2px;
+    transform: translateX(-50%);
+    background: rgba(0, 200, 200, 0.5);
   }
 }
 
