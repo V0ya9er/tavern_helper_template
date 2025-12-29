@@ -46,7 +46,7 @@
                 v-for="i in Math.max(0, item.node.depth - 1)"
                 :key="'line-' + i"
                 class="indent-unit"
-                :class="{ 'has-line': item.ancestorContinuations[i - 1] }"
+                :class="{ 'has-line': item.ancestorContinuations[i] }"
               ></div>
               <!-- 当前节点的L形连接线 -->
               <div v-if="item.node.depth > 0" class="branch-unit" :class="{ 'is-last': item.isLastChild }"></div>
