@@ -120,6 +120,7 @@ function toggle_select(node: ChatTreeNode) {
 .branch-line {
   display: block; // 确保能正确获取高度
   position: relative;
+  flex: 0 0 20px; // 固定宽度，不压缩不拉伸
   width: 20px;
   min-height: 100%;
 }
